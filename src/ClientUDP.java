@@ -22,34 +22,32 @@ public class ClientUDP {
         Path clientFilePath = Path.of(filePath);
 
         try {
-            long fileSize = Files.size(clientFilePath);
             DatagramSocket clientSocket = new DatagramSocket();
 
                 byte[] fileData = Files.readAllBytes(clientFilePath);
                 int filelength = fileData.length;
                 String lengthMessage = "LEN:" + filelength;
-                DatagramPacket clientPacket = new DatagramPacket(lengthMessage.getBytes(),lengthMessage.length(),InetAddress.getByName(hostName), portNumber);
-                clientSocket.send(clientPacket);
+                DatagramPacket lengthPacket = new DatagramPacket(lengthMessage.getBytes(),lengthMessage.length(),InetAddress.getByName(hostName), portNumber);
+                clientSocket.send(lengthPacket);
 
 
                 List<byte[]> dataChunks = client.splitPacket(fileData,1000);
                 while (!dataChunks.isEmpty()) {
 
-                    String sendMessage = "SEND:" + dataChunks.getFirst().length;
-                    clientPacket = new DatagramPacket(sendMessage.getBytes(), sendMessage.length(), InetAddress.getByName(hostName), portNumber);
+                    byte[] chunk = dataChunks.getFirst();
+                    DatagramPacket dataPacket = new DatagramPacket(chunk, chunk.length, InetAddress.getByName(hostName), portNumber);
+                    clientSocket.send(dataPacket);
 
+                    byte[] ackBuffer = new byte[3];
+                    DatagramPacket ackPacket = new DatagramPacket(ackBuffer, ackBuffer.length);
+                    clientSocket.receive(ackPacket);
 
-                    
-                    clientSocket.send(clientPacket);
-                    clientSocket.receive(clientPacket);
-                    String cpMessage = new String(clientPacket.getData());
+                    String cpMessage = new String(ackPacket.getData());
                     System.out.println(cpMessage);
                     if (cpMessage.startsWith("ACK")) {
                         dataChunks.removeFirst();
                     }
                 }
-
-
 
 
                 byte[] fpacket = new byte[3];
