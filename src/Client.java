@@ -55,16 +55,13 @@ specify several command line arguments, as detailed below:
         int portNumber = scanner.nextInt();
 
 
-
-        StringBuilder createUri = new StringBuilder();
-        createUri.append("http://localhost:");
-        createUri.append(portNumber);
-        createUri.append("/upload");
         //System.out.println(CreateUri.
         HttpClient client = HttpClient.newHttpClient();
         Client c = new Client();
 
-        c.Download(portNumber,client,filePath);
+        //c.UPLOAD(client,hostName,portNumber,filePath);
+        c.Download(client,hostName,portNumber,filePath);
+        //c.Download(portNumber,client,filePath);
 /*
         StringBuilder downloadUri = new StringBuilder();
         downloadUri.append("http://localhost:");
@@ -118,36 +115,65 @@ specify several command line arguments, as detailed below:
 
             switch (currentProtocol){
                 case UPLOAD:
-                    UPLOAD();
+                   // UPLOAD();
                 case DOWNLOAD:
                    // Download();
                 case QUIT:
-                    Quit();
+                    break;
             }
         }
 
     }
 
-    void UPLOAD(){
+    void UPLOAD(HttpClient client,String hostName,int portNumber,String filePath) throws IOException, InterruptedException, URISyntaxException {
+        StringBuilder createUri = new StringBuilder();
+        createUri.append("http://");
+        createUri.append(hostName +":");
+        createUri.append(portNumber);
+        createUri.append("/upload");
 
+        File file = new File(filePath);
+        if (file.exists()) {
+            System.out.println("File found at path: " + file.getAbsolutePath() + " "+file.getName());
+            System.out.println(createUri.toString());
+            HttpRequest putRequest = HttpRequest.newBuilder()
+
+                    .uri(new URI(createUri.toString()))
+                    .header("Content-Type", "text/plain; charset=UTF-8")
+                    .setHeader("fileName", file.getName())
+                    .setHeader("filePath", filePath)
+                    .setHeader("hostName", hostName)
+                    .PUT(HttpRequest.BodyPublishers.ofFile(file.toPath()))
+                    .build();
+
+
+            //sends the request while also receiving a response
+            HttpResponse<String> uploadFile = client.send(putRequest, HttpResponse.BodyHandlers.ofString());
+            System.out.println("Response from server: " + uploadFile.body());
+        }else {
+            System.out.println("File not Found:" + "User file path: " + filePath);
+        }
     }
-    void Download(int portNumber, HttpClient client, String filePath) throws IOException, InterruptedException {
+    void Download(HttpClient client,String hostName,int portNumber,String filePath) throws IOException, InterruptedException {
         StringBuilder downloadUri = new StringBuilder();
-        downloadUri.append("http://localhost:");
+        downloadUri.append("http://");
+        downloadUri.append(hostName +":");
         downloadUri.append(portNumber);
         downloadUri.append("/download");
-        File file = new File("/Users/onariromain/Documents/Fall 2024/ICSI 412/OS_V0/ICSI416_Web/src/file2.txt");
+        File file = new File(filePath);
         long fileSize = file.length();
 
         HttpRequest getRequest = HttpRequest.newBuilder()
                 .uri(URI.create(downloadUri.toString()))
+                .setHeader("hostName", hostName)
                 .setHeader("filePath",file.getPath())
                 .setHeader("fileSize", ""+fileSize)
                 .GET()
                 .build();
-        HttpResponse<Path> response = client.send(getRequest, HttpResponse.BodyHandlers.ofFile(Paths.get("downloaded_file.html"))
-        );
+        HttpResponse<Path> response = client.send(getRequest, HttpResponse.BodyHandlers.ofFile(Paths.get(file.getName())));
+        System.out.println("File delivered from server.");
     }
+
     void Quit(){
         System.out.println("Exiting....");
     }
